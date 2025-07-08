@@ -105,7 +105,12 @@ def _add_id() -> None:
     Adds a unique UUID to each row in a CSV file.
     """
     # Load the CSV into a Polars DataFrame.
-    df = pl.read_csv("/opt/airflow/data/raw_data.csv")
+    df = pl.read_csv("/opt/airflow/data/raw_data.csv", 
+                     dtypes={"personal_number": pl.Utf8, 
+                             "session_duration": pl.Utf8,
+                             "download_speed": pl.Utf8,
+                             "upload_speed": pl.Utf8,
+                             "consumed_traffic": pl.Utf8})
     # Generate a list of UUIDs (one for each row).
     uuid_list = [str(uuid.uuid4()) for _ in range(df.height)]
     # Add a new column with unique IDs.
@@ -126,7 +131,12 @@ def _update_datetime() -> None:
         current_time = datetime.now().replace(microsecond=0)
         yesterday_time = str(current_time - timedelta(days=1))
          # Load the CSV into a Polars DataFrame.
-        df = pl.read_csv("/opt/airflow/data/raw_data.csv")
+        df = pl.read_csv("/opt/airflow/data/raw_data.csv",
+                         dtypes={"personal_number": pl.Utf8,
+                                 "session_duration": pl.Utf8,
+                                 "download_speed": pl.Utf8,
+                                 "upload_speed": pl.Utf8,
+                                 "consumed_traffic": pl.Utf8})
         # Replace all values in the 'accessed_at' column with yesterday's timestamp.
         df = df.with_columns(pl.lit(yesterday_time).alias("accessed_at"))
         # Save the updated DataFrame back to a CSV file.

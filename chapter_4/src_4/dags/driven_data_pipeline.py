@@ -81,7 +81,7 @@ def _write_to_csv() -> None:
     Generates multiple fake user records and writes them to a CSV file.
     """
     # Create a Faker instance with Romanian data.
-    fake = _create_data("ro_RO")
+    fake = _create_data("es_MX")
     
     # Define the CSV headers.
     headers = [
@@ -202,6 +202,7 @@ extract_raw_data_task = PythonOperator(
 transform_address_task = GlueJobOperator(
     task_id='transform_address',
     job_name='staging_dim_address',
+    iam_role_name='GlueETLRole-DrivenData',
     dag=dag
 )
 
@@ -209,6 +210,7 @@ transform_address_task = GlueJobOperator(
 transform_date_task = GlueJobOperator(
     task_id='transform_date',
     job_name='staging_dim_date',
+    iam_role_name='GlueETLRole-DrivenData',
     dag=dag
 )
 
@@ -216,6 +218,7 @@ transform_date_task = GlueJobOperator(
 transform_finance_task = GlueJobOperator(
     task_id='transform_finance',
     job_name='staging_dim_finance',
+    iam_role_name='GlueETLRole-DrivenData',
     dag=dag
 )
 
@@ -223,6 +226,7 @@ transform_finance_task = GlueJobOperator(
 transform_person_task = GlueJobOperator(
     task_id='transform_person',
     job_name='staging_dim_person',
+    iam_role_name='GlueETLRole-DrivenData',
     dag=dag
 )
 
@@ -230,6 +234,7 @@ transform_person_task = GlueJobOperator(
 transform_network_usage_task = GlueJobOperator(
     task_id='transform_network_usage',
     job_name='fact_network_usage',
+    iam_role_name='GlueETLRole-DrivenData',
     dag=dag
 )
 

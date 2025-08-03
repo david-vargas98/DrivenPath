@@ -201,77 +201,131 @@ extract_raw_data_task = PythonOperator(
 # Task to trigger the address Glue job.
 transform_address_task = GlueJobOperator(
     task_id='transform_address',
-    job_name='staging_dim_address',
-    iam_role_name='GlueETLRole-DrivenData',
+    job_name='staging_dim_address_glue',
+    iam_role_name='glue_execution_role',
     dag=dag
 )
 
 # Task to trigger the date Glue job.
 transform_date_task = GlueJobOperator(
     task_id='transform_date',
-    job_name='staging_dim_date',
-    iam_role_name='GlueETLRole-DrivenData',
+    job_name='staging_dim_date_glue',
+    iam_role_name='glue_execution_role',
     dag=dag
 )
 
 # Task to trigger the finance Glue job.
 transform_finance_task = GlueJobOperator(
     task_id='transform_finance',
-    job_name='staging_dim_finance',
-    iam_role_name='GlueETLRole-DrivenData',
+    job_name='staging_dim_finance_glue',
+    iam_role_name='glue_execution_role',
     dag=dag
 )
 
 # Task to trigger the person Glue job.
 transform_person_task = GlueJobOperator(
     task_id='transform_person',
-    job_name='staging_dim_person',
-    iam_role_name='GlueETLRole-DrivenData',
+    job_name='staging_dim_person_glue',
+    iam_role_name='glue_execution_role',
     dag=dag
 )
 
 # Task to trigger the network usage Glue job.
 transform_network_usage_task = GlueJobOperator(
     task_id='transform_network_usage',
-    job_name='fact_network_usage',
-    iam_role_name='GlueETLRole-DrivenData',
+    job_name='staging_fact_network_usage_glue',
+    iam_role_name='glue_execution_role',
     dag=dag
 )
 
 # Task to trigger the Glue Crawler for raw data.
 update_raw_task = GlueCrawlerOperator(
     task_id='update_raw_data',
-    config={'Name': 'raw_driven_data'}
+    config={
+        'Name': 'raw_driven_data_crawler',
+        'Role': "arn:aws:iam::114914321936:role/glue_execution_role",
+        'Targets': {
+            'S3Targets': [
+                {'Path': "s3://driven-data-bucket-edgar-terraform/data/raw/"}
+            ]
+        },
+        'DatabaseName': 'driven_data_db'
+    }
 )
 
 # Task to trigger the Glue Crawler for address.
 update_address_task = GlueCrawlerOperator(
     task_id='update_address',
-    config={'Name': 'staging_dim_address'}
+    config={
+        'Name': 'staging_dim_address_crawler',
+        'Role': "arn:aws:iam::114914321936:role/glue_execution_role",
+        'Targets': {
+            'S3Targets': [
+                {'Path': "s3://driven-data-bucket-edgar-terraform/data/staging/staging_dim_address/"}
+            ]
+        },
+        'DatabaseName': 'driven_data_db'
+    }
 )
 
 # Task to trigger the Glue Crawler for date.
 update_date_task = GlueCrawlerOperator(
     task_id='update_date',
-    config={'Name': 'staging_dim_date'}
+    config={
+        'Name': 'staging_dim_date_crawler',
+        'Role': "arn:aws:iam::114914321936:role/glue_execution_role",
+        'Targets': {
+            'S3Targets': [
+                {'Path': "s3://driven-data-bucket-edgar-terraform/data/staging/staging_dim_date/"}
+            ]
+        },
+        'DatabaseName': 'driven_data_db'
+        }
 )
 
 # Task to trigger the Glue Crawler for finance.
 update_finance_task = GlueCrawlerOperator(
     task_id='update_finance',
-    config={'Name': 'staging_dim_finance'}
+    config={
+        'Name': 'staging_dim_finance_crawler',
+        'Role': "arn:aws:iam::114914321936:role/glue_execution_role",
+        'Targets': {
+            'S3Targets': [
+                {'Path': "s3://driven-data-bucket-edgar-terraform/data/staging/staging_dim_finance/"}
+            ]
+        },
+        'DatabaseName': 'driven_data_db'
+        }
 )
 
 # Task to trigger the Glue Crawler for person.
 update_person_task = GlueCrawlerOperator(
     task_id='update_person',
-    config={'Name': 'staging_dim_person'}
+    config={
+        'Name': 'staging_dim_person_crawler',
+        'Role': "arn:aws:iam::114914321936:role/glue_execution_role",
+        'Targets': {
+            'S3Targets': [
+                {'Path': "s3://driven-data-bucket-edgar-terraform/data/staging/staging_dim_person/"}
+            ]
+        },
+        'DatabaseName': 'driven_data_db'
+        }
 )
 
 # Task to trigger the Glue Crawler for network usage.
 update_network_usage_task = GlueCrawlerOperator(
     task_id='update_network_usage',
-    config={'Name': 'staging_fact_network_usage'}
+    config={
+        'Name': 'staging_fact_network_usage_crawler',
+        'Role': "arn:aws:iam::114914321936:role/glue_execution_role",
+        'Targets': {
+            'S3Targets': [
+                {'Path': "s3://driven-data-bucket-edgar-terraform/data/staging/staging_fact_network_usage/"}
+            ]
+        },
+        'DatabaseName': 'driven_data_db'
+        }
 )
 
 # Set the task in the DAG.

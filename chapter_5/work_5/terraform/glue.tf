@@ -89,10 +89,12 @@ resource "aws_glue_job" "staging_dim_address_glue" {
   description = "Glue job to transform data from raw to staging address."
   role_arn    = aws_iam_role.glue_execution_role.arn
   command {
-    name            = "pythonshell"
+    name            = "glueetl" # this helps to make use of Spark instead of python shell
     python_version  = "3.9"
-    script_location = "s3://${aws_s3_bucket.driven_data_bucket.bucket}/tasks/dim_address.py"
+    script_location = "s3://${aws_s3_bucket.driven_data_bucket.bucket}/tasks/staging_dim_address.py" #script location in s3 resource
   }
+  worker_type      = "G.1X"    # 1 DPUs worker
+  number_of_workers = 10         # workers quantity, the number of workers is the defaul as if we're creating on aws console
   tags = {
     Name = var.tag
   }
@@ -103,10 +105,12 @@ resource "aws_glue_job" "staging_dim_date_glue" {
   description = "Glue job to transform data from raw to staging date."
   role_arn = aws_iam_role.glue_execution_role.arn
   command {
-    name            = "pythonshell"
+    name            = "glueetl"
     python_version  = "3.9"
-    script_location = "s3://${aws_s3_bucket.driven_data_bucket.bucket}/tasks/dim_date.py"
+    script_location = "s3://${aws_s3_bucket.driven_data_bucket.bucket}/tasks/staging_dim_date.py"
   }
+  worker_type      = "G.1X"
+  number_of_workers = 10      
   tags = {
     Name = var.tag
   }
@@ -117,10 +121,12 @@ resource "aws_glue_job" "staging_dim_finance_glue" {
   description = "Glue job to transform data from raw to staging finance."
   role_arn = aws_iam_role.glue_execution_role.arn
   command {
-    name            = "pythonshell"
+    name            = "glueetl"
     python_version  = "3.9"
-    script_location = "s3://${aws_s3_bucket.driven_data_bucket.bucket}/tasks/dim_finance.py"
+    script_location = "s3://${aws_s3_bucket.driven_data_bucket.bucket}/tasks/staging_dim_finance.py"
   }
+  worker_type      = "G.1X"
+  number_of_workers = 10
   tags = {
     Name = var.tag
   }
@@ -131,10 +137,12 @@ resource "aws_glue_job" "staging_dim_person_glue" {
   description = "Glue job to transform data from raw to staging person."
   role_arn = aws_iam_role.glue_execution_role.arn
   command {
-    name            = "pythonshell"
+    name            = "glueetl"
     python_version  = "3.9"
-    script_location = "s3://${aws_s3_bucket.driven_data_bucket.bucket}/tasks/dim_person.py"
+    script_location = "s3://${aws_s3_bucket.driven_data_bucket.bucket}/tasks/staging_dim_person.py"
   }
+  worker_type      = "G.1X" 
+  number_of_workers = 10
   tags = {
     Name = var.tag
   }
@@ -145,10 +153,12 @@ resource "aws_glue_job" "staging_fact_network_usage_glue" {
   description = "Glue job to transform data from raw to staging network usage."
   role_arn = aws_iam_role.glue_execution_role.arn
   command {
-    name            = "pythonshell"
+    name            = "glueetl"
     python_version  = "3.9"
-    script_location = "s3://${aws_s3_bucket.driven_data_bucket.bucket}/tasks/fact_network_usage.py"
+    script_location = "s3://${aws_s3_bucket.driven_data_bucket.bucket}/tasks/staging_fact_network_usage.py"
   }
+  worker_type      = "G.1X"
+  number_of_workers = 10
   tags = {
     Name = var.tag
   }

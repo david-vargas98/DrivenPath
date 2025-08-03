@@ -19,7 +19,8 @@
             "Action": [ 
                 "s3:GetObject*",
                 "s3:GetBucket*",
-                "s3:List*"
+                "s3:List*",
+                "s3:PutObject"
             ],
             "Resource": [
                 "arn:aws:s3:::${bucket_name}",
@@ -101,11 +102,37 @@
 				"glue:GetJobRun",
 				"glue:GetCrawler",
 				"glue:StartCrawler",
-				"glue:GetCrawlerMetrics"
+				"glue:GetCrawlerMetrics",
+                "glue:CreateCrawler",
+                "glue:UpdateCrawler"
 			],
 			"Resource": [
-				"*"
-			]
-		}
+                "arn:aws:glue:${region}:${account_id}:crawler/*"
+            ]
+		},
+        {
+            "Effect": "Allow",
+            "Action": "glue:GetCrawlerMetrics",
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "glue:GetJob",
+                "glue:StartJobRun",
+                "glue:GetJobRun"
+            ],
+            "Resource": [
+                "arn:aws:glue:${region}:${account_id}:job/*"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "iam:PassRole",
+                "iam:GetRole"
+            ],
+            "Resource": "arn:aws:iam::${account_id}:role/glue_execution_role"
+        }
     ]
 }

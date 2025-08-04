@@ -246,7 +246,7 @@ update_raw_task = GlueCrawlerOperator(
         'Role': "arn:aws:iam::114914321936:role/glue_execution_role",
         'Targets': {
             'S3Targets': [
-                {'Path': "s3://driven-data-bucket-edgar-terraform/data/raw/"}
+                {'Path': "s3://driven-data-bucket-edgar/data/raw/"}
             ]
         },
         'DatabaseName': 'driven_data_db'
@@ -261,7 +261,7 @@ update_address_task = GlueCrawlerOperator(
         'Role': "arn:aws:iam::114914321936:role/glue_execution_role",
         'Targets': {
             'S3Targets': [
-                {'Path': "s3://driven-data-bucket-edgar-terraform/data/staging/staging_dim_address/"}
+                {'Path': "s3://driven-data-bucket-edgar/data/staging/staging_dim_address/"}
             ]
         },
         'DatabaseName': 'driven_data_db'
@@ -276,7 +276,7 @@ update_date_task = GlueCrawlerOperator(
         'Role': "arn:aws:iam::114914321936:role/glue_execution_role",
         'Targets': {
             'S3Targets': [
-                {'Path': "s3://driven-data-bucket-edgar-terraform/data/staging/staging_dim_date/"}
+                {'Path': "s3://driven-data-bucket-edgar/data/staging/staging_dim_date/"}
             ]
         },
         'DatabaseName': 'driven_data_db'
@@ -291,7 +291,7 @@ update_finance_task = GlueCrawlerOperator(
         'Role': "arn:aws:iam::114914321936:role/glue_execution_role",
         'Targets': {
             'S3Targets': [
-                {'Path': "s3://driven-data-bucket-edgar-terraform/data/staging/staging_dim_finance/"}
+                {'Path': "s3://driven-data-bucket-edgar/data/staging/staging_dim_finance/"}
             ]
         },
         'DatabaseName': 'driven_data_db'
@@ -306,7 +306,7 @@ update_person_task = GlueCrawlerOperator(
         'Role': "arn:aws:iam::114914321936:role/glue_execution_role",
         'Targets': {
             'S3Targets': [
-                {'Path': "s3://driven-data-bucket-edgar-terraform/data/staging/staging_dim_person/"}
+                {'Path': "s3://driven-data-bucket-edgar/data/staging/staging_dim_person/"}
             ]
         },
         'DatabaseName': 'driven_data_db'
@@ -321,7 +321,7 @@ update_network_usage_task = GlueCrawlerOperator(
         'Role': "arn:aws:iam::114914321936:role/glue_execution_role",
         'Targets': {
             'S3Targets': [
-                {'Path': "s3://driven-data-bucket-edgar-terraform/data/staging/staging_fact_network_usage/"}
+                {'Path': "s3://driven-data-bucket-edgar/data/staging/staging_fact_network_usage/"}
             ]
         },
         'DatabaseName': 'driven_data_db'

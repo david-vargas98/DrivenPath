@@ -32,7 +32,7 @@ FROM raw_data
 transformed_data = spark.sql(sql_query)
 
 # Write the transformed DataFrame back to S3.
-transformed_data.write.csv("s3://driven-data-bucket-edgar-terraform/data/staging/staging_dim_finance", header=True, mode="overwrite")
+transformed_data.write.csv("s3://driven-data-bucket-edgar/data/staging/staging_dim_finance", header=True, mode="overwrite")
 
 # Commit the actions.
 job.commit()

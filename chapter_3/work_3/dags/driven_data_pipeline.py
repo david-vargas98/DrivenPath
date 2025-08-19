@@ -3,17 +3,15 @@ import random
 import csv
 import logging
 import uuid
-import boto3
 import polars as pl
-
 from faker import Faker
+
 from datetime import date, datetime, timedelta
 
 from airflow import DAG
-from airflow.models import Variable
+from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
-from airflow.providers.amazon.aws.operators.glue import GlueJobOperator
-from airflow.providers.amazon.aws.operators.glue_crawler import GlueCrawlerOperator
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 
 # Configure logging.
 logging.basicConfig(
@@ -22,12 +20,6 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S',
     handlers=[logging.StreamHandler()]
 )
-
-# Get Airflow variables.
-S3_BUCKET_NAME = Variable.get('S3_BUCKET_NAME')
-S3_FILE_PATH  = Variable.get('S3_FILE_PATH')
-
-local_file_path = "/tmp/raw_data.csv"
 
 
 def _create_data(locale: str) -> Faker:
@@ -91,13 +83,13 @@ def _write_to_csv() -> None:
     ]
 
     # Establish number of rows based date.
-    if str(date.today()) == "2024-09-29":
+    if str(date.today()) == "2024-09-23":
         rows = random.randint(100_372, 100_372)
     else:
         rows = random.randint(0, 1_101)
     
     # Open the CSV file for writing.
-    with open(local_file_path, mode="w", encoding="utf-8", newline="") as file:
+    with open("/opt/airflow/data/raw_data.csv", mode="a", encoding="utf-8", newline="") as file:
         writer = csv.writer(file)
         writer.writerow(headers)
         
@@ -113,13 +105,18 @@ def _add_id() -> None:
     Adds a unique UUID to each row in a CSV file.
     """
     # Load the CSV into a Polars DataFrame.
-    df = pl.read_csv(local_file_path)
+    df = pl.read_csv("/opt/airflow/data/raw_data.csv", 
+                     dtypes={"personal_number": pl.Utf8, 
+                             "session_duration": pl.Utf8,
+                             "download_speed": pl.Utf8,
+                             "upload_speed": pl.Utf8,
+                             "consumed_traffic": pl.Utf8})
     # Generate a list of UUIDs (one for each row).
     uuid_list = [str(uuid.uuid4()) for _ in range(df.height)]
     # Add a new column with unique IDs.
     df = df.with_columns(pl.Series("unique_id", uuid_list))
     # Save the updated DataFrame back to a CSV.
-    df.write_csv(local_file_path)
+    df.write_csv("/opt/airflow/data/raw_data.csv")
     # Log the action.
     logging.info("Added UUID to the dataset.")
 
@@ -128,32 +125,24 @@ def _update_datetime() -> None:
     """
     Update the 'accessed_at' column in a CSV file with the appropriate timestamp.
     """
-    # Change date only for next runs.
-    if str(date.today()) != "2024-09-29":
+        # Change date only for next runs.
+    if str(date.today()) != "2024-09-23":
         # Get the current time without milliseconds and calculate yesterday's time.
         current_time = datetime.now().replace(microsecond=0)
         yesterday_time = str(current_time - timedelta(days=1))
-        # Load the CSV into a Polars DataFrame.
-        df = pl.read_csv(local_file_path)
+         # Load the CSV into a Polars DataFrame.
+        df = pl.read_csv("/opt/airflow/data/raw_data.csv",
+                         dtypes={"personal_number": pl.Utf8,
+                                 "session_duration": pl.Utf8,
+                                 "download_speed": pl.Utf8,
+                                 "upload_speed": pl.Utf8,
+                                 "consumed_traffic": pl.Utf8})
         # Replace all values in the 'accessed_at' column with yesterday's timestamp.
         df = df.with_columns(pl.lit(yesterday_time).alias("accessed_at"))
         # Save the updated DataFrame back to a CSV file.
-        df.write_csv(local_file_path)
+        df.write_csv("/opt/airflow/data/raw_data.csv")
         # Log the action.
         logging.info("Updated accessed timestamp.")
-
-
-def _save_to_s3():
-    """
-    Save CSV file to S3 bucket.
-    """
-    # Create daily file.
-    DAILY_S3_FILE = S3_FILE_PATH + "_" + str(date.today()) + ".csv"
-    # Upload CSV file to S3
-    s3_client = boto3.client('s3')
-    s3_client.upload_file(local_file_path, S3_BUCKET_NAME, DAILY_S3_FILE)
-    # Log the action.
-    logging.info("Updated data to S3 bucket.")
 
 
 def save_raw_data():
@@ -168,11 +157,8 @@ def save_raw_data():
     _add_id()
     # Update the timestamp.
     _update_datetime()
-    # Load data to S3 bucket.
-    _save_to_s3()
     # Logging ending of the process.
     logging.info(f"Finished batch processing {date.today()}.")
-
 
 # Define the default arguments for DAG.
 default_args = {
@@ -183,102 +169,85 @@ default_args = {
 
 # Define the DAG.
 dag = DAG(
-    'driven_data_pipeline',
+    'extract_raw_data_pipeline',
     default_args=default_args,
     description='DataDriven Main Pipeline.',
-    schedule_interval="0 7 * * *",
-    start_date=datetime(2024, 9, 28),
+    schedule_interval="* 23 * * *",
+    start_date=datetime(2024, 9, 22),
     catchup=False,
 )
 
 # Define extract raw data task.
 extract_raw_data_task = PythonOperator(
-    task_id='extract_raw_data',
+     task_id='extract_raw_data',
     python_callable=save_raw_data,
     dag=dag,
 )
 
-# Task to trigger the address Glue job.
-transform_address_task = GlueJobOperator(
-    task_id='transform_address',
-    job_name='staging_dim_address',
-    iam_role_name='GlueETLRole-DrivenData',
+# Define create raw schema task.
+create_raw_schema_task = SQLExecuteQueryOperator(
+    task_id='create_raw_schema',
+    conn_id='postgres_conn',
+    sql='CREATE SCHEMA IF NOT EXISTS driven_raw;',
+    dag=dag,
+)
+
+# Define create raw table task.
+create_raw_table_task = SQLExecuteQueryOperator(
+    task_id='create_raw_table',
+    conn_id='postgres_conn',
+    sql="""
+    CREATE TABLE IF NOT EXISTS driven_raw.raw_batch_data (
+    person_name VARCHAR(100),
+    user_name VARCHAR(100),
+    email VARCHAR(100),
+    personal_number NUMERIC,
+    birth_date VARCHAR(100),
+    address VARCHAR(100),
+    phone VARCHAR(100),
+    mac_address VARCHAR(100),
+    ip_address VARCHAR(100),
+    iban VARCHAR(100),
+    accessed_at TIMESTAMP,
+    session_duration INT,
+    download_speed INT,
+    upload_speed INT,
+    consumed_traffic INT,
+    unique_id VARCHAR(100)
+    );
+    """,
     dag=dag
 )
 
-# Task to trigger the date Glue job.
-transform_date_task = GlueJobOperator(
-    task_id='transform_date',
-    job_name='staging_dim_date',
-    iam_role_name='GlueETLRole-DrivenData',
-    dag=dag
+# Define load CSV data into the table task.
+load_raw_data_task = SQLExecuteQueryOperator(
+    task_id='load_raw_data',
+    conn_id='postgres_conn',
+    sql="""
+    COPY driven_raw.raw_batch_data(
+    person_name, user_name, email, personal_number, birth_date,
+    address, phone, mac_address, ip_address, iban, accessed_at,
+    session_duration, download_speed, upload_speed, consumed_traffic, unique_id
+    )
+    FROM '/opt/airflow/data/raw_data.csv'
+    DELIMITER ','
+    CSV HEADER;
+    """
 )
 
-# Task to trigger the finance Glue job.
-transform_finance_task = GlueJobOperator(
-    task_id='transform_finance',
-    job_name='staging_dim_finance',
-    iam_role_name='GlueETLRole-DrivenData',
-    dag=dag
+# Define staging dbt models run task.
+run_dbt_staging_task = BashOperator(
+    task_id='run_dbt_staging',
+    bash_command='set -x; cd /opt/airflow/dbt && dbt run --select tag:staging',
 )
 
-# Task to trigger the person Glue job.
-transform_person_task = GlueJobOperator(
-    task_id='transform_person',
-    job_name='staging_dim_person',
-    iam_role_name='GlueETLRole-DrivenData',
-    dag=dag
+# Define trusted dbt models run task.
+run_dbt_trusted_task = BashOperator(
+    task_id='run_dbt_trusted',
+    bash_command='set -x; cd /opt/airflow/dbt && dbt run --select tag:trusted',
 )
 
-# Task to trigger the network usage Glue job.
-transform_network_usage_task = GlueJobOperator(
-    task_id='transform_network_usage',
-    job_name='fact_network_usage',
-    iam_role_name='GlueETLRole-DrivenData',
-    dag=dag
-)
-
-# Task to trigger the Glue Crawler for raw data.
-update_raw_task = GlueCrawlerOperator(
-    task_id='update_raw_data',
-    config={'Name': 'raw_driven_data'}
-)
-
-# Task to trigger the Glue Crawler for address.
-update_address_task = GlueCrawlerOperator(
-    task_id='update_address',
-    config={'Name': 'staging_dim_address'}
-)
-
-# Task to trigger the Glue Crawler for date.
-update_date_task = GlueCrawlerOperator(
-    task_id='update_date',
-    config={'Name': 'staging_dim_date'}
-)
-
-# Task to trigger the Glue Crawler for finance.
-update_finance_task = GlueCrawlerOperator(
-    task_id='update_finance',
-    config={'Name': 'staging_dim_finance'}
-)
-
-# Task to trigger the Glue Crawler for person.
-update_person_task = GlueCrawlerOperator(
-    task_id='update_person',
-    config={'Name': 'staging_dim_person'}
-)
-
-# Task to trigger the Glue Crawler for network usage.
-update_network_usage_task = GlueCrawlerOperator(
-    task_id='update_network_usage',
-    config={'Name': 'staging_fact_network_usage'}
-)
-
-# Set the task in the DAG.
-extract_raw_data_task >> update_raw_task
-update_raw_task >> [transform_address_task, transform_date_task, transform_finance_task, transform_person_task, transform_network_usage_task]
-transform_address_task >> update_address_task
-transform_date_task >> update_date_task
-transform_finance_task >> update_finance_task
-transform_person_task >> update_person_task
-transform_network_usage_task >> update_network_usage_task
+# Set the task in the DAG
+[extract_raw_data_task, create_raw_schema_task] >> create_raw_table_task
+create_raw_table_task >> load_raw_data_task >> run_dbt_staging_task
+run_dbt_staging_task >> run_dbt_trusted_task
